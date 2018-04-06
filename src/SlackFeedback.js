@@ -161,10 +161,10 @@ class SlackFeedback extends Component {
   send() {
     var { selectedType, sendURL, image } = this.state;
     var { allowEmpty, messageMaxLegth } = this.props,
-    var message = this.refs.message.value && this.refs.message.value.trim();
+    var message = this.refs.message.value || "";
     var level;
 
-    if (!allowEmpty && !message) {
+    if (!allowEmpty && !message.trim()) {
       this.error("Message is required field");
     }
     else if (messageMaxLegth && message.length > messageMaxLegth) {
