@@ -22,6 +22,7 @@ const propTypes = {
   contentStyles: PropTypes.object,
   showChannel: PropTypes.bool,
   allowEmpty: PropTypes.bool,
+  closeOnSent: PropTypes.bool,
   messageMaxLegth: PropTypes.number,
   title: PropTypes.node
 };
@@ -38,6 +39,7 @@ const defaultProps = {
   contentStyles: {},
   showChannel: true,
   allowEmpty: true,
+  closeOnSent: false,
   messageMaxLegth: 0,
   title: <span><SlackIcon /> Send Feedback to Slack</span>
 
@@ -60,7 +62,8 @@ class SlackFeedback extends Component {
       error: false,
       uploadingImage: false,
       selectedType: 'Bug',
-      image: {}
+      image: {},
+      feedbackText: ""
     };
 
     // Bind event handlers once to avoid performance issues with re-binding
@@ -89,6 +92,11 @@ class SlackFeedback extends Component {
     document.addEventListener('click', this.handleClickOutside.bind(this));
   }
 
+  handleFeedbackChange = e => {
+    const feedbackText = e.target.value || "";
+    this.setState({ feedbackText, error: null });
+  }
+
   handleClickOutside(event) {
 
     if (event.defaultPrevented) return;
@@ -100,7 +108,8 @@ class SlackFeedback extends Component {
 
   close() {
     this.setState({
-      active: false
+      active: false,
+      sent: false
     });
 
     document.removeEventListener('click', this.handleClickOutside.bind(this));
@@ -125,11 +134,16 @@ class SlackFeedback extends Component {
       sent: true,
       image: {},
       error: false,
+      feedbackText: "",
     }, () => {
-      this.refs.message.value = '';
-      setTimeout(() => {
-        this.setState({ sent: false });
-      }, 5 * 1000);
+      if (this.props.closeOnSent) {
+        this.close()
+      }
+      else {
+        setTimeout(() => {
+          this.setState({ sent: false });
+        }, 5 * 1000);
+      }
     });
   }
 
@@ -141,7 +155,7 @@ class SlackFeedback extends Component {
 
       setTimeout(() => {
         this.setState({ error: null })
-      }, 8 * 1000);
+      }, 4 * 1000);
     });
   }
 
@@ -150,7 +164,7 @@ class SlackFeedback extends Component {
       return 'Unexpected Error!';
     }
 
-    if(typeof err === 'string') {
+    if (typeof err === 'string') {
       return err;
     }
 
@@ -165,19 +179,18 @@ class SlackFeedback extends Component {
   }
 
   send() {
-    var { selectedType, sendURL, image } = this.state;
-    var { allowEmpty, messageMaxLegth } = this.props,
-    var message = this.refs.message.value || "";
+    var { selectedType, sendURL, image, feedbackText } = this.state;
+    var { allowEmpty, messageMaxLegth } = this.props;
     var level;
 
-    if (!allowEmpty && !message.trim()) {
+    if (!allowEmpty && !feedbackText.trim()) {
       this.error("Message is required field");
     }
-    else if (messageMaxLegth && message.length > messageMaxLegth) {
+    else if (messageMaxLegth && feedbackText.length > messageMaxLegth) {
       this.error("Message should be less than " + messageMaxLegth + " characters");
     }
     else {
-
+      var message = feedbackText.trim();
       // Attach the curent URL
       if (sendURL) message += `\n <${document.location.href}>`;
 
@@ -329,7 +342,8 @@ class SlackFeedback extends Component {
       image,
       sendURL,
       selectedType,
-      uploadingImage
+      uploadingImage,
+      feedbackText
     } = this.state;
 
     // do not show channel UI if no channel defined
@@ -374,7 +388,7 @@ class SlackFeedback extends Component {
             </ul>
 
             <label class="SlackFeedback--label">Your Message</label>
-            <textarea ref="message" class="SlackFeedback--textarea" placeholder="Message..." />
+            <textarea ref="message" class="SlackFeedback--textarea" placeholder="Message..." value={feedbackText} onChange={this.handleFeedbackChange} />
 
             {/* Only render the image upload if there's callback available  */}
             {this.props.onImageUpload ? this.renderImageUpload() : null}
